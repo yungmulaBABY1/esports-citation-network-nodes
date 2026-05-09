@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>How a Literature Constructs Consensus Without Evidence</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#app{width:100%;height:100%;background:#070d1a;font-family:Georgia,serif;color:#c8d4e8;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+#header{padding:14px 20px 10px;border-bottom:1px solid #1e2d4a;background:#060c17;flex-shrink:0}
+#header .eyebrow{font-size:9px;letter-spacing:.18em;color:#5a7090;text-transform:uppercase;margin-bottom:4px}
+#header h1{font-size:16px;font-weight:normal;color:#d4e0f0}
+#header p{font-size:10px;color:#4a6080;font-style:italic;margin-top:3px}
+#body{display:flex;flex:1;overflow:hidden}
+#sidebar{width:190px;border-right:1px solid #1a2840;padding:12px 10px;background:#060c17;overflow-y:auto;flex-shrink:0;font-size:10px}
+#sidebar .section-label{font-size:8.5px;letter-spacing:.12em;color:#3a5070;text-transform:uppercase;margin:10px 0 6px}
+#sidebar button{display:block;width:100%;background:transparent;border:1px solid #1a2840;color:#4a6080;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:10px;text-align:left;margin-bottom:4px;font-family:Georgia,serif}
+#sidebar button.active{background:#1a2e54;border-color:#3a5aa8;color:#8ab4d8}
+.legend-item{display:flex;align-items:flex-start;gap:6px;margin-bottom:7px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:1px}
+.legend-text{font-size:9px;color:#5a7090;line-height:1.4}
+.flag-item{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.flag-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.stat-row{display:flex;justify-content:space-between;margin-bottom:4px}
+.stat-label{color:#4a6080}
+.stat-val{color:#8ab4d8;font-weight:bold}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;cursor:grab;background:#070d1a}
+#canvas-wrap.dragging{cursor:grabbing}
+svg#net{width:100%;height:100%;display:block}
+#detail{position:absolute;bottom:12px;right:12px;width:300px;background:#070e1c;border:1px solid #333;border-radius:8px;padding:12px 14px;font-size:10.5px;line-height:1.6;box-shadow:0 6px 28px #000a;max-height:55vh;overflow-y:auto;display:none}
+#detail .d-name{font-size:12px;font-weight:bold;margin-bottom:1px}
+#detail .d-journal{font-size:9px;color:#4a6080;font-style:italic;margin-bottom:6px}
+#detail .d-title{color:#7a90a8;font-size:9.5px;font-style:italic;margin-bottom:8px;line-height:1.5}
+#detail .d-note{color:#7a9cb8;font-size:10px;line-height:1.6;margin-bottom:8px}
+#detail .d-stats{display:flex;gap:12px;border-top:1px solid #1a2840;padding-top:7px}
+#detail .d-stat{text-align:center}
+#detail .d-stat-label{font-size:8px;color:#3a5070;text-transform:uppercase;letter-spacing:.08em}
+#detail .d-stat-val{font-weight:bold;font-size:12px}
+#detail .close-btn{position:absolute;top:8px;right:10px;background:none;border:none;color:#4a6080;cursor:pointer;font-size:16px;line-height:1;font-family:Georgia,serif}
+#footer{padding:6px 20px;border-top:1px solid #1a2840;font-size:8px;color:#2a4060;font-style:italic;background:#060c17;display:flex;justify-content:space-between;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="eyebrow">Citation Network Analysis</div>
+    <h1>How a Literature Constructs Consensus Without Evidence</h1>
+    <p id="subtitle"></p>
+  </div>
+  <div id="body">
+    <div id="sidebar">
+      <div class="section-label">View</div>
+      <button class="active" onclick="setFilter('all')">All Papers</button>
+      <button onclick="setFilter('primary')">Core Network Only</button>
+      <button onclick="setFilter('secondary')">Secondary + Hub</button>
+      <button onclick="setFilter('bio')">Bio Literature Only</button>
+      <div class="section-label">Legend</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e8472a;border:2px solid #ff6b4a"></div><div class="legend-text">Central Hub (Rogstad 2021)</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a2744;border:2px solid #e8472a"></div><div class="legend-text">Primary Network Papers</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a2744;border:2px solid #c4a23a"></div><div class="legend-text">Frequently Cited Studies</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#12203a;border:2px solid #4a6fa8"></div><div class="legend-text">Secondary Network Papers</div></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1a3020;border:2px solid #3a8c5a"></div><div class="legend-text">Bio / Neuroscience / Sports Science → Zero citations from network</div></div>
+      <div class="section-label">Flags</div>
+      <div class="flag-item"><div class="flag-sq" style="background:#c4a23a"></div><span style="color:#c4a23a;font-size:9px">Uses ESA ~46% aggregate (no genre caveat)</span></div>
+      <div class="flag-item"><div class="flag-sq" style="background:#3a8c5a"></div><span style="color:#3a8c5a;font-size:9px">Engages biological / psychomotor literature</span></div>
+      <div class="section-label">Navigate</div>
+      <div style="color:#3a5070;line-height:1.7;font-size:9px">Drag to pan<br>Pinch / scroll to zoom<br>Tap node for details</div>
+      <div class="section-label">Network Stats</div>
+      <div id="stats"></div>
+    </div>
+    <div id="canvas-wrap">
+      <svg id="net" style="background:#070d1a">
+        <defs>
+          <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L7,3 z" fill="#e8652a"/>
+          </marker>
+          <filter id="glow-r" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-g" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect id="bio-zone" x="1018" y="55" width="204" height="580" rx="8" fill="#0a1a0e" stroke="#2a6040" stroke-width="1.5" stroke-dasharray="7,4"/>
+        <text x="1120" y="44" text-anchor="middle" font-size="8.5" fill="#3a8055" letter-spacing="1.5" font-family="Georgia,serif">BIOLOGICAL / NEUROSCIENCE /</text>
+        <text x="1120" y="56" text-anchor="middle" font-size="8.5" fill="#3a8055" letter-spacing="1.5" font-family="Georgia,serif">SPORTS SCIENCE LITERATURE</text>
+        <text x="1120" y="648" text-anchor="middle" font-size="8.5" fill="#c0392b" font-style="italic" font-family="Georgia,serif">→ zero citations from network</text>
+        <g id="edges"></g>
+        <g id="nodes"></g>
+      </svg>
+      <div id="detail">
+        <button class="close-btn" onclick="closeDetail()">×</button>
+        <div class="d-name" id="d-name"></div>
+        <div class="d-journal" id="d-journal"></div>
+        <div class="d-title" id="d-title"></div>
+        <div class="d-note" id="d-note"></div>
+        <div class="d-stats">
+          <div class="d-stat"><div class="d-stat-label">Citations</div><div class="d-stat-val" id="d-cit"></div></div>
+          <div class="d-stat"><div class="d-stat-label">Cites (net)</div><div class="d-stat-val" id="d-out"></div></div>
+          <div class="d-stat"><div class="d-stat-label">Cited by</div><div class="d-stat-val" id="d-in"></div></div>
+          <div class="d-stat" id="d-esa-wrap" style="display:none"><div class="d-stat-label" style="color:#c4a23a">ESA Flag</div><div class="d-stat-val" style="color:#c4a23a">✓</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="footer">
+    <span>This network does not represent independent research programs converging on the same conclusions. It is a self-referential citation loop.</span>
+    <span>Not a single paper in the cultural network cites the biological or sports science literature.</span>
+  </div>
+</div>
+<script>
+const PAPERS=[
+{id:"rogstad2021",label:"Rogstad\n(2021)",tier:"hub",x:500,y:400,citations:250,usesESA:true,engagesBio:false,fullTitle:"Gender in eSports research: a literature review",journal:"European Journal for Sport and Society",note:"Central hub. Traditional narrative review organized around hegemonic masculinity. States 'physical attributes are unrelated to high performance in eSports' without citation. 20 sources, zero from neuroscience or psychomotor literature."},
+{id:"taylor2012",label:"Taylor\n(2012)",tier:"primary",x:500,y:110,citations:180,usesESA:false,engagesBio:false,fullTitle:"Raising the Stakes: E-Sports and the Professionalization of Computer Gaming",journal:"MIT Press",note:"Foundational ethnography of esports culture. Documents masculine norms in competitive gaming spaces. Widely cited as origin point for the 'masculine gatekeeping' argument."},
+{id:"witkowski2013",label:"Witkowski\n(2013/2018)",tier:"primary",x:820,y:170,citations:95,usesESA:false,engagesBio:false,fullTitle:"On the Digital Playing Field: How We 'Do Sport' with Networked Computer Games",journal:"Games and Culture",note:"Ethnographic study of LAN esports. Argues esports reproduces traditional sporting masculinities. Frequently cited for institutional gatekeeping claim."},
+{id:"ratan2015",label:"Ratan et al.\n(2015)",tier:"primary",x:175,y:250,citations:140,usesESA:false,engagesBio:false,fullTitle:"Stand By Your Man: An Examination of Gender Disparity in League of Legends",journal:"Games and Culture",note:"Survey study of LoL players documenting hostile peer feedback experiences. Anchor citation for harassment argument."},
+{id:"shen2016",label:"Shen et al.\n(2016)",tier:"primary",x:760,y:330,citations:120,usesESA:false,engagesBio:false,fullTitle:"Do Men Advance Faster Than Women? Debunking the Gender Performance Gap in Two MMOs",journal:"Journal of Computer-Mediated Communication",note:"Analyzes MMO leveling speed controlling for playtime. Cited as evidence performance gap is a stereotype. Critical flaw: MMO leveling measures time investment, not psychomotor capacity."},
+{id:"paaben2017",label:"Paaßen et al.\n(2017)",tier:"primary",x:410,y:430,citations:150,usesESA:true,engagesBio:false,fullTitle:"What is a True Gamer? The Male Gamer Stereotype and the Marginalization of Women in Video Game Culture",journal:"Sex Roles",note:"Literature review (no original data). Uses ESA aggregate ~46% figure to argue 'male gamer' stereotype is inaccurate. Acknowledges stereotype becomes accurate for 'highly skilled players' in subordinate clause, then continues as if it didn't."},
+{id:"ruvalcaba2018",label:"Ruvalcaba\net al. (2018)",tier:"primary",x:155,y:520,citations:175,usesESA:false,engagesBio:false,fullTitle:"Women's Experiences in eSports: Gendered Differences in Peer and Spectator Feedback During Competitive Video Game Play",journal:"Journal of Sport and Social Issues",note:"Two-study paper. Study 1 found NO gender differences in criticism reports. Study 2: Twitch chat analysis — sexual harassment finding from qualitative subset only. Conflates streaming harassment with ranked play harassment."},
+{id:"harwell2018",label:"Harwell et al.\n(2018)",tier:"frequent",x:860,y:480,citations:65,usesESA:false,engagesBio:true,fullTitle:"Sex Differences in Learning to Play a Complex Video Game",journal:"Computers in Human Behavior",note:"Lab study using Space Fortress (1980s single-task game). Female novices showed faster relative gains during 30-hour training. Residual male advantage remained. Cited as evidence practice closes gap — own data shows gap narrows, does not close."},
+{id:"darvin2020",label:"Darvin et al.\n(2020/2021)",tier:"primary",x:780,y:620,citations:130,usesESA:true,engagesBio:false,fullTitle:"Breaking the Glass Monitor: Examining the Underrepresentation of Women in Esports Environments",journal:"Sport Management Review",note:"Qualitative interview study. Uses ESA/Interpret participation figures without genre disaggregation. Primary citation for institutional gatekeeping argument."},
+{id:"kordyaka2023",label:"Kordyaka\net al. (2023)",tier:"primary",x:295,y:720,citations:85,usesESA:true,engagesBio:false,fullTitle:"Gender Disparities in Esports – An Explanatory Mixed-Methods Approach",journal:"Computers in Human Behavior",note:"Mixed-methods LoL study. Achievement motivation finding selected post-hoc. Sample: self-selected female LoL players — guaranteed elevated motivation by selection. Recommends female players set more modest goals."},
+{id:"darvin2021b",label:"Darvin\n(2021b)",tier:"secondary",x:660,y:720,citations:55,usesESA:true,engagesBio:false,fullTitle:"Esports Gender Diversity: A Leisure Constraints Perspective",journal:"Sport Management Review",note:"Applies hierarchical leisure constraints model to female esports underrepresentation. Cites Rogstad, Darvin 2020, Paaßen. Uses ESA aggregate without genre caveat."},
+{id:"choi2019",label:"Choi et al.\n(2019)",tier:"secondary",x:920,y:580,citations:45,usesESA:false,engagesBio:false,fullTitle:"Deep Strike: Playing Gender in the World of Overwatch and the Case of Geguri",journal:"Feminist Media Studies",note:"Case study of Geguri (Overwatch support player). Frames her as ceiling-breaker. Does not address that she was a substitute on a poor team with limited playtime."},
+{id:"crothers2024",label:"Crothers et al.\n(2024)",tier:"secondary",x:100,y:380,citations:30,usesESA:true,engagesBio:false,fullTitle:"'It's Just Not Safe': Gender-Based Harassment and Toxicity Experiences of Women in Esports",journal:"Games and Culture",note:"Survey of amateur female esports participants. Cites Rogstad, Ruvalcaba, Darvin. Uses ESA 46% figure. Harassment focus at amateur level."},
+{id:"madden2021",label:"Madden et al.\n(2021)",tier:"secondary",x:270,y:120,citations:40,usesESA:true,engagesBio:false,fullTitle:"Why Are You Playing Games? You Are a Girl! Exploring Gender Biases in Esports",journal:"CHI Conference Proceedings",note:"HCI study of gender bias in esports contexts. Uses ESA aggregate. Cites Rogstad, Paaßen, Ruvalcaba."},
+{id:"kaye2016",label:"Kaye &\nPennington (2016)",tier:"frequent",x:60,y:630,citations:70,usesESA:false,engagesBio:false,fullTitle:"'You Can't Watch This!': Stereotype Threat Predicts Female Observers' Video-Gaming Performance",journal:"Computers in Human Behavior",note:"81 participants, 60 female. Gaming task: coin-collecting exercise, 5-minute window. Primary citation for stereotype threat argument. Ecological validity: total absence."},
+{id:"schelfhout2021",label:"Schelfhout et al.\n(2021)",tier:"secondary",x:950,y:360,citations:35,usesESA:false,engagesBio:false,fullTitle:"Balancing Gender Identity and Gamer Identity: Gender Issues Faced by Women in Esports",journal:"Social Inclusion",note:"Qualitative analysis of female gamer identity negotiation. Cites Taylor, Witkowski, Rogstad."},
+{id:"hao2020",label:"Hao et al.\n(2020)",tier:"secondary",x:720,y:120,citations:28,usesESA:false,engagesBio:false,fullTitle:"Conquering Gender Stereotype Threat in Digital Sports: Effects of Gender Swapping on Female Players' Continuous Participation Intention in Esports",journal:"Scientific Programming",note:"Experimental study of gender avatar swapping and stereotype threat. Cites Rogstad, Shen, Kaye."},
+{id:"fisher2022",label:"Fisher &\nFoust (2022)",tier:"secondary",x:900,y:260,citations:32,usesESA:true,engagesBio:false,fullTitle:"#GirlGamers, Soldiers, and Public Relations: Analyzing Gender Representation in U.S. Army Esports",journal:"Journal of Communication",note:"Content analysis of US Army esports gender representation. Uses ESA aggregate. Cites Rogstad, Paaßen, Darvin."},
+{id:"tang2021",label:"Tang et al.\n(2021)",tier:"secondary",x:140,y:720,citations:42,usesESA:true,engagesBio:false,fullTitle:"When Breaking Glass Ceiling Leads to Glass Screens: Gender Differences in Civility and Competitive Aggressiveness in Esports",journal:"International Journal of Sport Communication",note:"Survey of esports participants on civility and aggressiveness. Uses ESA aggregate. Cites Rogstad, Ruvalcaba, Darvin, Paaßen."},
+{id:"piggott2022",label:"Piggott et al.\n(2022)",tier:"secondary",x:550,y:760,citations:25,usesESA:false,engagesBio:false,fullTitle:"Leadership and Gender Inclusion in Esports Organisations",journal:"Social Issues in Esports (Routledge)",note:"Qualitative study of gender inclusion in esports organizational structures. Cites Rogstad, Darvin."},
+{id:"moura2024",label:"Moura et al.\n(2024)",tier:"secondary",x:390,y:130,citations:18,usesESA:true,engagesBio:false,fullTitle:"Women Gamers: Gender Performativities in Female eSports Consumption",journal:"RAM – Revista de Administração Mackenzie",note:"Brazilian study of female esports consumption. Uses ESA ~46% figure. Cites Rogstad, Darvin, Kordyaka."},
+{id:"systematic2025",label:"Systematic\nReview (2025)",tier:"secondary",x:190,y:420,citations:8,usesESA:true,engagesBio:false,fullTitle:"A Systematic Review of the Current State and Challenges to the Representation of Women in Esports",journal:"Discover Psychology (Springer)",note:"PRISMA systematic review, 19 studies. Cites Rogstad as authoritative overview. No engagement with biological or psychomotor literature."},
+{id:"xue2019",label:"Xue et al.\n(2019)",tier:"secondary",x:840,y:760,citations:38,usesESA:false,engagesBio:false,fullTitle:"Gender Differences in Esports: Evidence From League of Legends",journal:"Journal of Leisure Research",note:"LoL participation study. Included in Rogstad's original 21-paper sample."},
+{id:"frontiers2025",label:"Women Expert\nGamers (2025)",tier:"secondary",x:670,y:220,citations:5,usesESA:false,engagesBio:false,fullTitle:"Women Expert Gamers: Portrait of an Understudied Population",journal:"Frontiers in Psychology",note:"Recent study of high-skill female gamers. Cites Rogstad as primary overview. Does not engage with biological literature."},
+{id:"voyer1995",label:"Voyer et al.\n(1995)\n3,200 cit.",tier:"bio",x:1080,y:100,citations:3200,usesESA:false,engagesBio:true,fullTitle:"Magnitude of Sex Differences in Spatial Abilities: A Meta-Analysis",journal:"Psychological Bulletin",note:"Definitive meta-analysis on mental rotation sex differences. 3,200+ citations. Not cited by any primary network paper."},
+{id:"mathew2020",label:"Mathew et al.\n(2020)\nVisuomotor",tier:"bio",x:1080,y:220,citations:45,usesESA:false,engagesBio:true,fullTitle:"Sex Differences in Visuomotor Tracking: Evidence from Two Independent Datasets",journal:"Scientific Reports",note:"Large male advantage in visuomotor tracking (d = 0.69–1.25). Core demand of competitive FPS. Not cited by any network paper."},
+{id:"deaner2012",label:"Deaner et al.\n(2012)\nBehavioral",tier:"bio",x:1080,y:340,citations:280,usesESA:false,engagesBio:true,fullTitle:"A Sex Difference in the Predisposition for Physical Competition",journal:"PLOS ONE",note:"Behavioral analysis of 112,000 individuals. Females 51% of exercise, 24% of sports, 20% of team sports. Gap persists after Title IX equalization. Not cited by any network paper."},
+{id:"gur2012",label:"Gur et al.\n(2012)\nPNAS",tier:"bio",x:1080,y:460,citations:1800,usesESA:false,engagesBio:true,fullTitle:"Sex Differences in Brain Connectivity: A Diffusion MRI Study",journal:"PNAS",note:"Neural connectivity architecture sex differences. Directly relevant to sensory-motor integration demands of competitive gaming. Not cited by any network paper."},
+{id:"deaner2015",label:"Deaner et al.\n(2015)\nEvo.Behav.",tier:"bio",x:1080,y:580,citations:95,usesESA:false,engagesBio:true,fullTitle:"Females' Underrepresentation in Competitive Sports Reflects Lesser Interest, Not Fewer Opportunities",journal:"Evolutionary Behavioral Sciences",note:"Female underrepresentation in competitive sports reflects lesser interest in competition specifically, not fewer opportunities. Not cited by any network paper."}
+];
+
+const EDGES=[
+[“rogstad2021”,“taylor2012”],[“rogstad2021”,“witkowski2013”],[“rogstad2021”,“ratan2015”],[“rogstad2021”,“shen2016”],[“rogstad2021”,“paaben2017”],[“rogstad2021”,“ruvalcaba2018”],[“rogstad2021”,“darvin2020”],[“rogstad2021”,“kaye2016”],
+[“kordyaka2023”,“rogstad2021”],[“darvin2021b”,“rogstad2021”],[“tang2021”,“rogstad2021”],[“crothers2024”,“rogstad2021”],[“madden2021”,“rogstad2021”],[“fisher2022”,“rogstad2021”],[“piggott2022”,“rogstad2021”],[“moura2024”,“rogstad2021”],[“systematic2025”,“rogstad2021”],[“schelfhout2021”,“rogstad2021”],[“frontiers2025”,“rogstad2021”],[“hao2020”,“rogstad2021”],[“xue2019”,“rogstad2021”],
+[“kordyaka2023”,“ruvalcaba2018”],[“kordyaka2023”,“paaben2017”],[“kordyaka2023”,“darvin2020”],
+[“darvin2021b”,“darvin2020”],[“darvin2021b”,“paaben2017”],
+[“tang2021”,“ruvalcaba2018”],[“tang2021”,“darvin2020”],[“tang2021”,“paaben2017”],
+[“crothers2024”,“ruvalcaba2018”],[“crothers2024”,“darvin2020”],
+[“madden2021”,“paaben2017”],[“madden2021”,“ruvalcaba2018”],
+[“fisher2022”,“paaben2017”],[“fisher2022”,“darvin2020”],
+[“moura2024”,“darvin2020”],
+[“systematic2025”,“kordyaka2023”],[“systematic2025”,“darvin2020”],[“systematic2025”,“ruvalcaba2018”],[“systematic2025”,“choi2019”],
+[“hao2020”,“shen2016”],[“hao2020”,“kaye2016”],
+[“choi2019”,“witkowski2013”],[“choi2019”,“taylor2012”],
+[“schelfhout2021”,“taylor2012”],[“schelfhout2021”,“witkowski2013”],
+[“frontiers2025”,“kordyaka2023”],
+[“piggott2022”,“darvin2020”],
+[“darvin2020”,“ruvalcaba2018”],[“darvin2020”,“taylor2012”],
+[“paaben2017”,“taylor2012”],[“paaben2017”,“shen2016”],
+[“ruvalcaba2018”,“ratan2015”]
+];
+
+const TIER={
+hub:{fill:”#e8472a”,stroke:”#ff6b4a”,r:50},
+primary:{fill:”#1a2744”,stroke:”#e8472a”,r:36},
+frequent:{fill:”#1a2744”,stroke:”#c4a23a”,r:30},
+secondary:{fill:”#12203a”,stroke:”#4a6fa8”,r:26},
+bio:{fill:”#1a3020”,stroke:”#3a8c5a”,r:28}
+};
+
+const paperMap={};
+PAPERS.forEach(p=>paperMap[p.id]=p);
+
+let pan={x:0,y:0},zoom=0.82,drag=null,selectedId=null,currentFilter=‘all’;
+
+function visiblePapers(){
+return PAPERS.filter(p=>{
+if(currentFilter===‘all’) return true;
+if(currentFilter===‘primary’) return [‘hub’,‘primary’,‘frequent’].includes(p.tier);
+if(currentFilter===‘bio’) return p.tier===‘bio’;
+if(currentFilter===‘secondary’) return p.tier===‘secondary’||p.tier===‘hub’;
+return true;
+});
+}
+
+function render(){
+const vp=visiblePapers();
+const vids=new Set(vp.map(p=>p.id));
+const ve=EDGES.filter(e=>vids.has(e[0])&&vids.has(e[1]));
+
+const eg=document.getElementById(‘edges’);
+const ng=document.getElementById(‘nodes’);
+eg.innerHTML=’’; ng.innerHTML=’’;
+
+// edges
+ve.forEach(([fid,tid])=>{
+const f=paperMap[fid],t=paperMap[tid];
+const tf=TIER[f.tier],tt=TIER[t.tier];
+const dx=t.x-f.x,dy=t.y-f.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+const nx=dx/dist,ny=dy/dist;
+const x1=f.x+nx*(tf.r+3),y1=f.y+ny*(tf.r+3);
+const x2=t.x-nx*(tt.r+5),y2=t.y-ny*(tt.r+5);
+const isActive=selectedId&&(fid===selectedId||tid===selectedId);
+const line=document.createElementNS(‘http://www.w3.org/2000/svg’,‘line’);
+line.setAttribute(‘x1’,x1);line.setAttribute(‘y1’,y1);
+line.setAttribute(‘x2’,x2);line.setAttribute(‘y2’,y2);
+line.setAttribute(‘stroke’,’#e8652a’);
+line.setAttribute(‘stroke-width’,isActive?2.2:1.1);
+line.setAttribute(‘opacity’,selectedId&&!isActive?0.1:0.78);
+line.setAttribute(‘marker-end’,‘url(#arr)’);
+eg.appendChild(line);
+});
+
+// nodes
+vp.forEach(p=>{
+const t=TIER[p.tier];
+const isSel=p.id===selectedId;
+const g=document.createElementNS(‘http://www.w3.org/2000/svg’,‘g’);
+g.setAttribute(‘transform’,`translate(${p.x},${p.y})`);
+g.style.cursor=‘pointer’;
+g.addEventListener(‘click’,e=>{e.stopPropagation();selectPaper(p.id===selectedId?null:p.id);});
+
+```
+if(isSel){
+  const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  ring.setAttribute('r',t.r+9);ring.setAttribute('fill','none');
+  ring.setAttribute('stroke',t.stroke);ring.setAttribute('stroke-width','1.5');
+  ring.setAttribute('opacity','0.4'); g.appendChild(ring);
+}
+
+const circ=document.createElementNS('http://www.w3.org/2000/svg','circle');
+circ.setAttribute('r',t.r);
+circ.setAttribute('fill',isSel?t.stroke:t.fill);
+circ.setAttribute('stroke',t.stroke);
+circ.setAttribute('stroke-width',isSel?3:2);
+if(p.tier==='hub') circ.setAttribute('filter','url(#glow-r)');
+if(p.tier==='bio') circ.setAttribute('filter','url(#glow-g)');
+if(selectedId&&!isSel) circ.setAttribute('opacity','0.45');
+g.appendChild(circ);
+
+if(p.usesESA){
+  const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  dot.setAttribute('r',5);dot.setAttribute('cx',t.r-5);dot.setAttribute('cy',-(t.r-5));
+  dot.setAttribute('fill','#c4a23a');dot.setAttribute('stroke','#070d1a');dot.setAttribute('stroke-width','1');
+  g.appendChild(dot);
+}
+
+const lines=p.label.split('\n');
+lines.forEach((line,i)=>{
+  const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+  txt.setAttribute('y',(i*11)-(lines.length-1)*5.5);
+  txt.setAttribute('text-anchor','middle');
+  txt.setAttribute('font-size',p.tier==='hub'?11:8.5);
+  txt.setAttribute('font-weight',p.tier==='hub'?'bold':'normal');
+  txt.setAttribute('fill',p.tier==='hub'?'#fff':'#c8d8f0');
+  txt.setAttribute('font-family','Georgia,serif');
+  txt.style.pointerEvents='none';
+  txt.textContent=line;
+  g.appendChild(txt);
+});
+
+ng.appendChild(g);
+```
+
+});
+
+// transform
+document.getElementById(‘net’).setAttribute(‘style’,`--px:${pan.x};--py:${pan.y};--z:${zoom}`);
+eg.setAttribute(‘transform’,`translate(${pan.x},${pan.y}) scale(${zoom})`);
+ng.setAttribute(‘transform’,`translate(${pan.x},${pan.y}) scale(${zoom})`);
+document.getElementById(‘bio-zone’).setAttribute(‘transform’,`translate(${pan.x},${pan.y}) scale(${zoom})`);
+// also move the bio zone text
+document.querySelectorAll(’#net > text’).forEach(t=>{
+t.setAttribute(‘transform’,`translate(${pan.x},${pan.y}) scale(${zoom})`);
+});
+}
+
+function selectPaper(id){
+selectedId=id;
+const det=document.getElementById(‘detail’);
+if(!id){det.style.display=‘none’;render();return;}
+const p=paperMap[id];
+const t=TIER[p.tier];
+det.style.borderColor=t.stroke+‘66’;
+document.getElementById(‘d-name’).style.color=t.stroke;
+document.getElementById(‘d-name’).textContent=p.label.replace(/\n/g,’ ’);
+document.getElementById(‘d-journal’).textContent=p.journal;
+document.getElementById(‘d-title’).textContent=p.fullTitle;
+document.getElementById(‘d-note’).textContent=p.note;
+document.getElementById(‘d-cit’).textContent=p.citations.toLocaleString();
+document.getElementById(‘d-cit’).style.color=t.stroke;
+const outE=EDGES.filter(e=>e[0]===id).length;
+const inE=EDGES.filter(e=>e[1]===id).length;
+document.getElementById(‘d-out’).textContent=outE;
+document.getElementById(‘d-in’).textContent=inE;
+document.getElementById(‘d-esa-wrap’).style.display=p.usesESA?‘block’:‘none’;
+det.style.display=‘block’;
+render();
+}
+
+function closeDetail(){selectPaper(null);}
+
+function setFilter(f){
+currentFilter=f;
+selectedId=null;
+document.getElementById(‘detail’).style.display=‘none’;
+document.querySelectorAll(’#sidebar button’).forEach(b=>{
+b.classList.toggle(‘active’,b.getAttribute(‘onclick’)===`setFilter('${f}')`);
+});
+render();
+}
+
+// stats
+function updateStats(){
+const net=PAPERS.filter(p=>p.tier!==‘bio’);
+document.getElementById(‘stats’).innerHTML=[
+[‘Total network papers’,net.length],
+[‘Use ESA aggregate’,PAPERS.filter(p=>p.usesESA).length],
+[‘Engage bio lit.’,PAPERS.filter(p=>p.engagesBio&&p.tier!==‘bio’).length],
+[‘Bio papers ignored’,PAPERS.filter(p=>p.tier===‘bio’).length],
+[‘Mapped edges’,EDGES.length]
+].map(([l,v])=>`<div class="stat-row"><span class="stat-label">${l}</span><span class="stat-val">${v}</span></div>`).join(’’);
+document.getElementById(‘subtitle’).textContent=`Esports gender papers — ${net.length} network papers + ${PAPERS.filter(p=>p.tier==='bio').length} biological/sports science papers (zero citations from network)`;
+}
+
+// pan/zoom
+const wrap=document.getElementById(‘canvas-wrap’);
+wrap.addEventListener(‘mousedown’,e=>{
+if(e.target===wrap||e.target===document.getElementById(‘net’)){
+drag={sx:e.clientX-pan.x,sy:e.clientY-pan.y};
+wrap.classList.add(‘dragging’);
+}
+});
+window.addEventListener(‘mousemove’,e=>{if(drag){pan={x:e.clientX-drag.sx,y:e.clientY-drag.sy};render();}});
+window.addEventListener(‘mouseup’,()=>{drag=null;wrap.classList.remove(‘dragging’);});
+wrap.addEventListener(‘wheel’,e=>{e.preventDefault();zoom=Math.max(0.3,Math.min(3,zoom-e.deltaY*0.001));render();},{passive:false});
+
+// touch
+let lastTouches=null,lastDist=null;
+wrap.addEventListener(‘touchstart’,e=>{
+if(e.touches.length===1){drag={sx:e.touches[0].clientX-pan.x,sy:e.touches[0].clientY-pan.y};}
+if(e.touches.length===2){lastDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+},{passive:true});
+wrap.addEventListener(‘touchmove’,e=>{
+if(e.touches.length===1&&drag){pan={x:e.touches[0].clientX-drag.sx,y:e.touches[0].clientY-drag.sy};render();}
+if(e.touches.length===2&&lastDist){
+const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+zoom=Math.max(0.3,Math.min(3,zoom*(d/lastDist)));lastDist=d;render();
+}
+},{passive:true});
+wrap.addEventListener(‘touchend’,()=>{drag=null;lastDist=null;});
+
+// click outside
+document.getElementById(‘net’).addEventListener(‘click’,()=>selectPaper(null));
+
+updateStats();
+render();
+</script>
+
+</body>
+</html>
